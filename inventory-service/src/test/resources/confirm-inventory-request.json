@@ -1,0 +1,5 @@
+{
+  "orderNo": "${orderNo}",
+  "skuId": "${skuId}",
+  "confirmQuantity": 10
+}

@@ -1,0 +1,19 @@
+{
+  "orderNumber": "ORD-TEST-001",
+  "userId": 1001,
+  "currency": "USD",
+  "note": "Please deliver as soon as possible, thank you!",
+  "shippingAddress": "D15NR72 Building 66, Pelleltstown, Dublin, Ireland",
+  "billingAddress": "D15NR71 Building 66, Pelleltstown, Dublin, Ireland",
+  "recipientName": "Jonathan",
+  "recipientEmail": "Jonathanjiang01@gmail.com",
+  "recipientPhone": "+353871042230",
+  "orderItems": [
+    {
+      "productId": 101,
+      "productName": "iPhone 15",
+      "unitPrice": 799.00,
+      "quantity": 1
+    }
+  ]
+}

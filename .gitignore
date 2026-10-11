@@ -1,0 +1,27 @@
+# Build output and editor state
+target/
+bin/
+build/
+.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+.DS_Store
+*.log
+.github/modernize/
+
+# Local database files and runtime data
+/product-service-1/mysql/
+/order-service-1/mysql/
+/inventory-service/mysql/
+/api-gateway-1/mysql/
+volume-data/
+
+# Local credentials and agent state
+.env
+.env.*
+!.env.example
+.aws/
+.agents/
+.codex/

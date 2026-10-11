@@ -1,0 +1,19 @@
+{
+  "orderNumber": "order-insufficient-001",
+  "userId": 1001,
+  "currency": "USD",
+  "note": "Please deliver as soon as possible, thank you!",
+  "shippingAddress": "D15NR71 Building 60, Pelleltstown, Dublin, Ireland",
+  "billingAddress": "D15NR71 Building 60, Pelleltstown, Dublin, Ireland",
+  "recipientName": "Jonathan",
+  "recipientEmail": "Jonathanjiang01@gmail.com",
+  "recipientPhone": "0871042230",
+  "orderItems": [
+    {
+      "skuId": "sku-contract-001",
+      "skuName": "contract sku",
+      "unitPrice": 799.00,
+      "quantity": 100
+    }
+  ]
+}
