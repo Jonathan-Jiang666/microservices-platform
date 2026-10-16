@@ -57,4 +57,13 @@ public class OutboxEvents {
     @Column (name = "destination_topic", nullable = false)
     private String destinationTopic;
 
+    @Column (name = "last_error", columnDefinition = "TEXT")
+    private String lastError;
+
+    @Column (name = "failed_at", columnDefinition = "DATETIME(6)")
+    private LocalDateTime failedAt;
+
+    @Column (name = "next_attempt_at", columnDefinition = "DATETIME(6)")
+    private LocalDateTime nextAttemptAt;
+
 }

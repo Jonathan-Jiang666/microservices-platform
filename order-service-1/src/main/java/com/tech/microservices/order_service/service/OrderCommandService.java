@@ -62,7 +62,7 @@ public class OrderCommandService {
     {
         String idempotencyKey = "inventory-result-"+eventID;
 
-        switch(command.releaseReason())
+        switch(command.reason())
         {
             case ORDER_CANCELLATION -> {
                 this.orderService.updateOrderStatus(
@@ -80,7 +80,7 @@ public class OrderCommandService {
                     OrderEventType.ORDER_EXPIRED
                 );
             }
-            default -> throw new IllegalArgumentException("Unexpected value: " + command.releaseReason());
+            default -> throw new IllegalArgumentException("Unexpected value: " + command.reason());
         }
     }
 
@@ -94,7 +94,7 @@ public class OrderCommandService {
         this.orderService.updateOrderStatus(
         idempotencyKey, 
         command.orderNumber(), 
-        OrderStatus.FAILED,
+        OrderStatus.CANCELLATION_FAILED,
         OrderEventType.ORDER_CANCELLATION_FAILED
         );
     }

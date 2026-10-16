@@ -43,15 +43,17 @@ public class OrderController {
     }
 
     // Update Order Status and return status is 200 OK
-    @PatchMapping("/api/orders/{orderNumber}/status")
-    public ResponseEntity<OrderResponse> updateOrderStatus(
-            @RequestHeader("idempotencyKey") String idempotencyKey,
-            @PathVariable String orderNumber,
-            @RequestBody @Valid UpdateOrderStatusRequest status)
-    {
-        OrderResponse response = orderService.updateOrderStatus(idempotencyKey,orderNumber, status.status(), OrderEventType.ORDER_STATUS_CHANGED);
-        return ResponseEntity.ok(response);
-    }
+    // 因为可能客户端传递状态是  cancelled, expired,paid 等状态 绕开了底层的处理逻辑 所以这个方法不建议开放
+    // @PatchMapping("/api/orders/{orderNumber}/status")
+    // public ResponseEntity<OrderResponse> updateOrderStatus(
+    //         @RequestHeader("idempotencyKey") String idempotencyKey,
+    //         @PathVariable String orderNumber,
+    //         @RequestBody @Valid UpdateOrderStatusRequest status)
+    // {
+    //     OrderResponse response = orderService.updateOrderStatus(idempotencyKey,orderNumber, status.status(), OrderEventType.ORDER_STATUS_CHANGED);
+    //     return ResponseEntity.ok(response);
+    // }
+
 
 
     // Confirm Paid Order Inventory

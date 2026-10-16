@@ -260,7 +260,7 @@ public class OrderService {
             .recipientName(orderRequest.recipientName())
             .recipientEmail(orderRequest.recipientEmail())
             .recipientPhone(orderRequest.recipientPhone())
-            .orderStatus(OrderStatus.INVENTORY_PENDING)  //新订单一定是 pending
+            .orderStatus(OrderStatus.PENDING)  //新订单一定是 pending
             .build();
 
          // 3. convert order items
@@ -983,20 +983,46 @@ public class OrderService {
     // Determine the current state and the target state, and identify state changes permitted by the operation
     private boolean canTransition(OrderStatus currentStatus, OrderStatus targetStatus)
     {
+        if (currentStatus == null || targetStatus == null) {
+        return false;
+         }
          return switch (currentStatus)
          {
-             case CREATED -> targetStatus == OrderStatus.CANCELLED || targetStatus == OrderStatus.INVENTORY_PENDING;
-             case INVENTORY_PENDING -> targetStatus == OrderStatus.INVENTORY_RESERVED || targetStatus == OrderStatus.INVENTORY_FAILED || targetStatus == OrderStatus.CANCELLED;
-             case INVENTORY_RESERVED -> targetStatus == OrderStatus.PAYMENT_PENDING || targetStatus == OrderStatus.CANCELLED;
-             case CANCELLATION_PENDING -> targetStatus == OrderStatus.CANCELLED || targetStatus == OrderStatus.CANCELLATION_FAILED;
-             case CANCELLATION_FAILED -> targetStatus == OrderStatus.CANCELLED;
-             case CANCELLATION_COMPLETED -> targetStatus == OrderStatus.CANCELLED;
-             case PAYMENT_PENDING -> targetStatus == OrderStatus.PAID || targetStatus == OrderStatus.CANCELLED;
-             case PAID -> targetStatus == OrderStatus.CONFIRMED;
-             case CONFIRMED -> targetStatus == OrderStatus.COMPLETED;
-             case INVENTORY_FAILED -> targetStatus == OrderStatus.CANCELLED;
-             case PAYMENT_FAILED -> targetStatus == OrderStatus.CANCELLED;
-             case COMPLETED, CANCELLED, EXPIRED, REFUNDED -> false;
+             case PENDING ->
+              targetStatus == OrderStatus.AWAITING_PAYMENT
+               || targetStatus == OrderStatus.FAILED;
+
+             case AWAITING_PAYMENT -> 
+             targetStatus == OrderStatus.PAID
+              || targetStatus == OrderStatus.CANCELLATION_PENDING;
+
+             case CANCELLATION_PENDING ->
+              targetStatus == OrderStatus.CANCELLED
+                || targetStatus == OrderStatus.CANCELLATION_FAILED;
+
+             case CANCELLATION_FAILED -> 
+             targetStatus == OrderStatus.CANCELLATION_PENDING;
+
+             case PAID -> 
+             targetStatus == OrderStatus.PROCESSING
+              || targetStatus == OrderStatus.REFUND_PENDING;
+
+             case PROCESSING -> 
+             targetStatus == OrderStatus.SHIPPED
+              || targetStatus == OrderStatus.REFUND_PENDING;
+
+             case SHIPPED -> 
+             targetStatus == OrderStatus.DELIVERED;
+
+             case DELIVERED ->
+                targetStatus == OrderStatus.COMPLETED
+                    || targetStatus == OrderStatus.REFUND_PENDING;
+
+             case REFUND_PENDING -> 
+             targetStatus == OrderStatus.REFUNDED
+              || targetStatus == OrderStatus.REFUND_FAILED;
+
+             case COMPLETED, CANCELLED, EXPIRED, REFUNDED, REFUND_FAILED, FAILED-> false;
          };
 
     }
@@ -1004,27 +1030,8 @@ public class OrderService {
     // Determine whether the current status allows cancellation
     private boolean canCancel(OrderStatus currentStatus)
     {
-        return switch (currentStatus)
-        {
-            case CANCELLATION_PENDING,
-            CANCELLATION_FAILED,
-            CANCELLATION_COMPLETED -> true;
-
-            case INVENTORY_RESERVED, 
-            PAYMENT_PENDING, 
-            PAYMENT_FAILED,
-            INVENTORY_FAILED -> true;
-
-            case
-            CREATED,
-            INVENTORY_PENDING, 
-            PAID, 
-            CONFIRMED,
-            COMPLETED, 
-            CANCELLED,
-            EXPIRED, 
-            REFUNDED -> false;
-        };
+        return canTransition(currentStatus, OrderStatus.CANCELLATION_PENDING);
+        
     }
 
     // Create OrderStatusChangedEvent by Order and will used for payload json

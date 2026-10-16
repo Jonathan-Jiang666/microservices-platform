@@ -1,5 +1,6 @@
 package com.tech.microservices.inventory_service.service.publisher;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -26,7 +27,6 @@ import org.springframework.scheduling.annotation.Scheduled;
 )
 public class OutboxEventPublisher {
     
-    private final OutboxEventRepository outboxEventRepository;
     private final OutboxEventService outboxEventService;
     private final KafkaTemplate<String, String> kafkaTemplate;
 
@@ -36,7 +36,7 @@ public class OutboxEventPublisher {
     @Scheduled(fixedDelayString = "${inventory.outbox.fixed-delay-ms}")
     public void publishPendingEvents() {
     
-        List<OutboxEvents> pendingEvents = outboxEventRepository.findTop100ByStatusOrderByCreatedAtAsc(OutboxEventStatus.PENDING.name());
+        List<OutboxEvents> pendingEvents = outboxEventService.findPendingEvents();
         for(OutboxEvents event : pendingEvents)
         {
             try {
@@ -49,7 +49,7 @@ public class OutboxEventPublisher {
                 log.info("OutboxEvent published successfully, this id is {}", event.getId());
             } catch (Exception e) {
                 
-                outboxEventService.markFailed(event);
+                outboxEventService.markFailed(event,e);
                 log.error("Failed to publish OutboxEvent, this id is {}. Error: {}", event.getId(), e.getMessage());
             }
         }

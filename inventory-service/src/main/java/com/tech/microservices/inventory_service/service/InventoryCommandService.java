@@ -166,10 +166,13 @@ public class InventoryCommandService {
             }
            
         }
+        // 所有 SKU 成功后，写整体订单级成功事件 
+        // after all SKUs are successfully released, write the overall order-level success event
         String payload = buildInventoryReleaseCompletedPayload(
                 eventID,
                 command
             );
+            
         outboxEventService.createInventoryReleaseCompletedEvent(
                 command.orderNumber(),
                 payload

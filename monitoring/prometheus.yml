@@ -1,0 +1,64 @@
+# Prometheus 负责采集指标和评估规则，不执行数据库查询或消息重试。
+# Java 的 refresh() 更新内存快照，Prometheus 通过 HTTP 读取这些指标。
+
+
+global:
+  # 全局默认采集间隔：每 15 秒抓取一次各目标的指标。
+  scrape_interval: 15s
+
+  # 默认每 15 秒评估一次告警规则和记录规则。
+  # 不代表每 15 秒发送一次通知，通知频率由 Alertmanager 控制。
+  evaluation_interval: 15s
+
+# 加载规则文件，例如 FAILED 数量超限、PENDING 等待过久。
+# 这是容器内部路径，需要通过 Docker Compose 挂载对应文件。
+rule_files:
+  - /etc/prometheus/outbox-alerts.yml
+
+# 告警触发后，将告警交给 Alertmanager 处理。
+# 邮件接收人、告警分组和重复提醒间隔，在 alertmanager.yml 中配置。
+alerting:
+  alertmanagers:
+    - static_configs:
+        # alertmanager 是 Docker 服务名，9093 是其容器监听端口。
+        # 要求 Prometheus 与 Alertmanager 所在网络能够互通。
+        - targets: ["alertmanager:9093"]
+
+# 指标采集任务配置，可以定义多个 job。
+scrape_configs:
+  # 这组采集任务的名称，不是 Java 调度器或微服务注册名。
+  - job_name: microservices
+
+    # 每个目标上读取指标的 HTTP 路径。
+    # 服务需要启用此端点，并允许下面的账号访问。
+    metrics_path: /actuator/prometheus
+
+    # 单次抓取超时为 5 秒，不是每隔 5 秒抓取。
+    scrape_timeout: 5s
+
+    # HTTP Basic 认证，此处凭据用于本 job 下的所有目标。
+    # 两个服务凭据不同时，应拆成不同 job。
+    basic_auth:
+      # 必须是服务中真实存在的账号；复用管理员时改为 admin。
+      username: admin
+
+      # 从容器内的文件读取登录密码原文，不是 BCrypt 密文。
+      # 对应文件需要挂载、允许容器读取，并禁止提交到 Git。
+      password_file: /etc/prometheus/secrets/monitoring-password
+
+
+    # 静态配置采集地址，不进行自动服务发现。
+    static_configs:
+      # 当前假设：Java 服务运行在 Mac，Prometheus 运行在 Docker Desktop。
+      # host.docker.internal 让容器访问宿主机，8081 是 Order 端口。
+      - targets: ["host.docker.internal:8081"]
+        # 标签用于指标查询和告警分组，不决定实际连接地址。
+        labels:
+          service: order-service
+          environment: local
+          
+      # Inventory 使用相同指标路径和认证配置，端口为 8082。
+      - targets: ["host.docker.internal:8082"]
+        labels:
+          service: inventory-service
+          environment: local

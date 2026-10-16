@@ -22,10 +22,13 @@ import com.tech.microservices.inventory_service.model.InventoryCommandType;
 public class InventoryCommandConsumer {
 
 // 1. 事件信封示例
-//  {
+// {
 //   "eventId": "9cb33c9e-4f19-43d4-aa11-3740fdd7dcf8",
 //   "eventType": "INVENTORY_RESERVATION_REQUESTED",
+//   "eventVersion": 1,
+//   "aggregateType": "ORDER",
 //   "aggregateId": "order-publisher-003",
+//   "occurredAt": "2026-10-12T10:30:00",
 //   "data": {
 //     "orderNumber": "order-publisher-003",
 //     "items": [
@@ -35,7 +38,7 @@ public class InventoryCommandConsumer {
 //       }
 //     ]
 //   }
-//   }
+// }
     
     private final ObjectMapper objectMapper;
     //private final InventoryCommandService inventoryCommandService;

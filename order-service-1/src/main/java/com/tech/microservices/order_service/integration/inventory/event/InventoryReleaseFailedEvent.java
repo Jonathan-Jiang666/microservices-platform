@@ -8,7 +8,7 @@ import com.tech.microservices.order_service.integration.inventory.command.Invent
 public record InventoryReleaseFailedEvent(
         UUID commandEventId,
         String orderNumber,
-        InventoryReleaseReason releaseReason,
+        InventoryReleaseReason reason,
         String failedSkuId,
         String reasonCode,
         String message,

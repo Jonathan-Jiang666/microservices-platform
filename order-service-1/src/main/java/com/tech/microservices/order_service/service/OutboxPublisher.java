@@ -44,7 +44,7 @@ public class OutboxPublisher {
                 log.info("Published event id is {}", event.getId());
             }
             catch(Exception e){
-                outboxEventsService.markFailed(event);
+                outboxEventsService.markFailed(event,e);
                 log.error("Failed to publish event id is {}, error: {}", 
                 event.getId(),
                 e.getMessage());

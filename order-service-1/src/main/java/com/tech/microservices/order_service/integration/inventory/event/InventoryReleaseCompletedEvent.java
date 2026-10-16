@@ -10,7 +10,7 @@ import com.tech.microservices.order_service.integration.inventory.command.Invent
 public record InventoryReleaseCompletedEvent(
     UUID commandEventId,
         String orderNumber,
-        InventoryReleaseReason releaseReason,
+        InventoryReleaseReason reason,
         List<InventoryReleaseRequestItem> items,
         LocalDateTime completedAt
 ) {

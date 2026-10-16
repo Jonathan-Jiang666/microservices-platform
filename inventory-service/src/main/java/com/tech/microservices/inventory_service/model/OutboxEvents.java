@@ -51,4 +51,16 @@ public class OutboxEvents {
     public void onCreate() {
         createdAt = LocalDateTime.now();
     }
+
+    @Column (name = "last_error", columnDefinition = "TEXT")
+    private String lastError;
+
+    @Column (name = "failed_at", columnDefinition = "DATETIME(6)")
+    private LocalDateTime failedAt;
+
+
+    @Column (name = "next_attempt_at", columnDefinition = "DATETIME(6)")
+    private LocalDateTime nextAttemptAt;
+
+
 }

@@ -40,6 +40,10 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.PATCH, "/api/orders/**").hasAnyRole("ADMIN", "SUPERADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/orders/**").hasAnyRole("SUPERADMIN")
                         .requestMatchers(HttpMethod.GET, "/authorities").hasAnyRole("USER", "ADMIN", "SUPERADMIN")
+                        .requestMatchers(HttpMethod.GET, "/actuator/prometheus",
+                        "/actuator/health",
+                        "/actuator/health/**"
+                        ).hasRole("ADMIN")
                         .anyRequest().denyAll())
                 .httpBasic(withDefaults())
                 .csrf(CsrfConfigurer::disable);

@@ -1,0 +1,77 @@
+# Prometheus 告警规则文件。
+# Prometheus 周期性计算下面的 expr，条件连续满足 for 指定时间后才触发告警。
+# 配置来源：monitoring/prometheus.yml。
+# 其中 job="microservices" 来自 scrape_configs.job_name: microservices。
+# service 和 environment 来自 prometheus.yml 中各目标的 static_configs.labels。
+# 告警规则不能直接读取另一个 YAML 文件的变量，只能匹配 Prometheus 抓取后生成的标签。
+groups:
+  # 同一组中的规则会一起加载和管理。
+  - name: outbox-publishing
+    rules:
+      # 规则 1：Outbox 中存在发布失败且尚未恢复的消息。
+      - alert: OutboxPublishFailed
+        # FAILED 数量大于 0 即表示有消息发布失败。
+        # max by 防止同一数据库被多个实例统计时重复相加。
+        expr: max by (environment, service) (outbox_failed_count{job="microservices"}) > 0
+        # 短暂失败不立即通知，持续 1 分钟才告警。
+        for: 1m
+        labels:
+          # warning 表示需要处理，但不一定代表服务已经完全不可用。
+          severity: warning
+        annotations:
+          # summary 和 description 会显示在 Prometheus/Alertmanager 页面及通知中。
+          summary: 'Unresolved outbox publishing failures in {{ $labels.service }}'
+          description: '{{ $value }} messages are parked in FAILED. Inspect the service database and publishing logs; do not force an order status change.'
+
+      # 规则 2：有消息长时间停留在 PENDING，可能是发布器、Kafka 或网络异常
+      - alert: OutboxPendingTooOld
+        # oldest_pending_age_seconds 是最早一条 PENDING 消息的等待秒数。
+        expr: max by (environment, service) (outbox_pending_oldest_age_seconds{job="microservices"}) > 300
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'Outbox backlog is too old in {{ $labels.service }}'
+          description: 'The oldest pending message is {{ $value }} seconds old. Check publisher health, Kafka and the configured recovery window.'
+
+      # 规则 3：监控任务查询数据库失败，或最近一次成功采集已经过期。
+      - alert: OutboxMonitorUnhealthy
+        expr: |
+          # collection_success = 0：最近一次数据库统计失败。
+          (outbox_monitor_collection_success{job="microservices"} == 0)
+          # last_success_timestamp 过旧：任务可能卡住，即使 success 仍保持为 1。
+          or on (job, instance)
+          (time() - outbox_monitor_last_success_timestamp_seconds{job="microservices"} > 60)
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'Outbox database monitoring is unhealthy in {{ $labels.service }}'
+          description: 'Collection failed or its last success is too old. Existing count gauges may be stale; inspect the database and monitoring scheduler.'
+
+      # 规则 4：服务可以被 Prometheus 抓取，但没有暴露预期的 Outbox 监控指标。
+      - alert: OutboxMonitorMissing
+        expr: |
+          # up = 1 表示 HTTP 抓取成功。
+          (up{job="microservices"} == 1)
+          # unless 表示左侧存在、右侧不存在时才告警。
+          unless on (job, instance)
+          outbox_monitor_last_success_timestamp_seconds{job="microservices"}
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'Outbox metrics are missing in {{ $labels.service }}'
+          description: 'Scraping works, but the expected Outbox metric is absent. Check dependencies, component scanning and whether monitoring was disabled.'
+
+      # 规则 5：Prometheus 无法抓取服务的指标端点。
+      - alert: ServiceMetricsUnavailable
+        # up = 0 可能是服务停止、端口错误、网络问题或认证失败。
+        expr: up{job="microservices"} == 0
+        for: 1m
+        labels:
+          # critical 表示指标链路已不可用，需要优先排查。
+          severity: critical
+        annotations:
+          summary: 'Metrics endpoint is unavailable in {{ $labels.service }}'
+          description: 'Check the service process, network, credentials and endpoint exposure. A failed scrape does not by itself prove that all business endpoints are down.'

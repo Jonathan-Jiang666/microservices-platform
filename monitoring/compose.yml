@@ -1,0 +1,51 @@
+# 本文件只启动监控组件，不启动 Order、Inventory、Product 或 API Gateway。
+# 端口格式为：宿主机端口:容器端口。
+# 当前已避开项目现有端口：Order 8081、Inventory 8082、API Gateway 9000、
+# MySQL 3306/3307、Kafka 9092、Kafka UI 8085 和 MongoDB 27017。
+services:
+  # Prometheus 负责抓取 Java 服务指标、计算 outbox-alerts.yml 中的规则。
+  prometheus:
+    # 固定镜像版本，避免 latest 在不同时间产生不同运行结果。
+    image: prom/prometheus:v3.15.0
+    # Docker 重启后自动恢复监控容器。
+    restart: unless-stopped
+    # 指定容器内的 Prometheus 主配置和数据保存目录。
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+    ports:
+      # 只绑定本机，浏览器访问 http://localhost:9090。
+      # 9090 未被当前项目其他 Compose 服务占用。
+      - "127.0.0.1:9090:9090"
+    volumes:
+      # :ro 表示容器只能读取配置，不能修改宿主机文件。
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./outbox-alerts.yml:/etc/prometheus/outbox-alerts.yml:ro
+      # 该文件由宿主机创建，内容是监控账号的明文密码；不要提交 Git。
+      - ./secrets/monitoring-password:/etc/prometheus/secrets/monitoring-password:ro
+      # 命名卷保存 Prometheus 时序数据，容器删除后数据仍可保留。
+      - prometheus-data:/prometheus
+
+  # Alertmanager 接收 Prometheus 告警，负责分组、延迟和邮件通知。
+  alertmanager:
+    # 固定镜像版本，避免使用 latest 导致配置行为变化。
+    image: prom/alertmanager:v0.34.1
+    restart: unless-stopped
+    # 指定 Alertmanager 配置和数据保存目录。
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --storage.path=/alertmanager
+    ports:
+      # 只绑定本机，浏览器访问 http://localhost:9093。
+      # 9093 未被当前项目其他 Compose 服务占用。
+      - "127.0.0.1:9093:9093"
+    volumes:
+      - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      # 该文件存放 Gmail SMTP 应用专用密码，不要提交 Git。
+      - ./secrets/smtp-password:/etc/alertmanager/secrets/smtp-password:ro
+      - alertmanager-data:/alertmanager
+
+# Docker 命名卷：分别保存 Prometheus 和 Alertmanager 的运行数据。
+volumes:
+  prometheus-data:
+  alertmanager-data:

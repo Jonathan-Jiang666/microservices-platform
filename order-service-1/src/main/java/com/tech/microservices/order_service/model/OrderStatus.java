@@ -17,5 +17,6 @@ public enum OrderStatus {
     EXPIRED,                 // 已过期
     REFUND_PENDING,          // 退款处理中
     REFUNDED,                // 已退款
+    REFUND_FAILED,           // 退款失败
     FAILED                   // 创建流程最终失败
 }

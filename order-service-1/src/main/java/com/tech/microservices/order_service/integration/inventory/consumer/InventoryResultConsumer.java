@@ -15,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
+import java.util.Arrays;
 
 
 @Component 
@@ -26,24 +27,29 @@ public class InventoryResultConsumer {
 
 // 1. 事件信封示例
 // {
-// 	"data": {
-// 		"items": [
-// 			{
-// 				"skuId": "sku-postman-outbox-001",
-// 				"quantity": 1
-// 			}
-// 		],
-// 		"completedAt": "2026-09-22T14:56:31.465813",
-// 		"orderNumber": "order-publisher-006",
-// 		"commandEventId": "129d4b8c-99e5-4254-82e3-beb5d356c08e"
-// 	},
-// 	"eventId": "32ea68e6-0d60-45b4-b12c-e5f23c86d084",
-// 	"eventType": "INVENTORY_RESERVATION_COMPLETED",
-// 	"occurredAt": "2026-09-22T14:56:31.466162",
-// 	"aggregateId": "order-publisher-006",
-// 	"eventVersion": 1,
-// 	"aggregateType": "ORDER"
+//   "eventId": "32ea68e6-0d60-45b4-b12c-e5f23c86d084",
+//   "eventType": "INVENTORY_RELEASE_COMPLETED",
+//   "eventVersion": 1,
+//   "aggregateType": "ORDER",
+//   "aggregateId": "ORDER-20261012-001",
+//   "occurredAt": "2026-10-12T10:30:00.125",
+//   "data": {
+//     "commandEventId": "129d4b8c-99e5-4254-82e3-beb5d356c08e",
+//     "orderNumber": "ORDER-20261012-001",
+//     "reason": "ORDER_CANCELLATION",
+//     "items": [
+//       {
+//         "skuId": "SKU-001",
+//         "quantity": 2
+//       },
+//       {
+//         "skuId": "SKU-002",
+//         "quantity": 1
+//       }
+//     ],
+//     "completedAt": "2026-10-12T10:30:00.120"
 //   }
+// }
     
     private final ObjectMapper objectMapper;
     private final OrderCommandService orderCommandService;
@@ -55,16 +61,44 @@ public class InventoryResultConsumer {
 
     public void consumeInventoryResult( String message)
     {
-        try {
-            // 1. 解析最外层事件信封
-            JsonNode envelope = objectMapper.readTree(message);
 
-            // 2. 获取 Inventory Service 发布的结果事件类型。
-            // eventType 由 Inventory Service 的 InventoryOrderEventType 枚举生成，
-            // 生产端位置：inventory-service/model/InventoryOrderEventType.java。
-            String eventType = envelope
-                    .get("eventType")
-                    .asText();
+        try {
+        // 1. 解析最外层事件信封
+        //         收到 inventory.events 消息
+        //     → 解析信封，读取 eventType
+        //     → 不在 Order 的事件枚举里：正常返回
+        //     → 在枚举里：解析订单字段
+        //     → switch 调用对应的业务方法
+        JsonNode envelope = objectMapper.readTree(message); 
+        if (envelope == null || !envelope.isObject()) {
+               log.warn("Received empty message, ignoring.");
+            throw new IllegalArgumentException("Received empty message");
+        }
+
+        // 2. 获取 Inventory Service 发布的结果事件类型。
+        // eventType 由 Inventory Service 的 InventoryOrderEventType 枚举生成，
+        // 生产端位置：inventory-service/model/InventoryOrderEventType.java。
+        JsonNode eventTypeNode = envelope.get("eventType");
+        if(eventTypeNode == null || !eventTypeNode.isTextual())
+        {
+                log.error("Invalid event type in message: {}", message);
+                throw new IllegalArgumentException("Kafka message has invalid event type");
+        }
+
+        String eventType = eventTypeNode.asText();
+
+        InventoryResultEventType resultEventType =
+        Arrays.stream(InventoryResultEventType.values())
+                .filter(type -> type.name().equals(eventType))
+                .findFirst()
+                .orElse(null);
+
+        if (resultEventType == null) {
+           log.debug("Ignoring inventory event not handled by Order: {}", eventType);
+           return;
+        }
+
+
 
             // 3. 当前 Consumer 只处理库eventId与订单号相同的 且 只处理状态是完整的
             // if (!"INVENTORY_RESERVATION_COMPLETED".equals(eventType) && !"INVENTORY_RESERVATION_FAILED".equals(eventType)) {
@@ -75,7 +109,7 @@ public class InventoryResultConsumer {
             //     return;
             // }
           
-            InventoryResultEventType resultEventType = InventoryResultEventType.valueOf(eventType);
+            
 
   
             String eventId = envelope
@@ -136,6 +170,21 @@ public class InventoryResultConsumer {
                     );
                     orderCommandService.markOrderReleaseCompletedStatus(eventId, command);
                 }
+                // 处理库存释放结果事件失败
+                case INVENTORY_RELEASE_FAILED -> {
+                        log.info(
+                                "Processing order cancelled failed command for order: {}, eventId={}",
+                                orderNumber,
+                                eventId
+                        );
+                        InventoryReleaseFailedEvent command = objectMapper.treeToValue(
+                                envelope.get("data"),
+                                InventoryReleaseFailedEvent.class
+                        );
+                        orderCommandService.markOrderInventoryReleaseFailedStatus(eventId, command);
+                }
+
+
                 // 处理库存过期结果事件成功
                 case INVENTORY_EXPIRATION_COMPLETED -> {
                     log.info(

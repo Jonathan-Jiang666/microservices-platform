@@ -1,9 +1,20 @@
 {
   "folders": [
-    { "path": "product-service-1" },
-    { "path": "order-service-1" },
-    { "path": "inventory-service" },
-    { "path": "api-gateway-1" }
+    {
+      "path": "product-service-1"
+    },
+    {
+      "path": "order-service-1"
+    },
+    {
+      "path": "inventory-service"
+    },
+    {
+      "path": "api-gateway-1"
+    },
+    {
+      "path": "."
+    }
   ],
   "settings": {
     "java.configuration.updateBuildConfiguration": "automatic",

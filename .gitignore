@@ -22,6 +22,7 @@ volume-data/
 .env
 .env.*
 !.env.example
+/monitoring/secrets/*
 .aws/
 .agents/
 .codex/

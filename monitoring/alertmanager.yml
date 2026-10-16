@@ -1,0 +1,48 @@
+# Alertmanager 配置文件。
+# Prometheus 负责判断告警是否触发，Alertmanager 负责分组、延迟和发送通知。
+
+global:
+  # 告警恢复后，最多保留 5 分钟的恢复状态。
+  resolve_timeout: 5m
+
+  # Gmail 的 SMTP 服务器和提交端口。
+  smtp_smarthost: smtp.gmail.com:587
+
+  # 发件人地址，通常与 smtp_auth_username 使用同一个 Gmail 地址。
+  smtp_from: jonathanjiang01@gmail.com
+
+  # SMTP 登录账号。
+  smtp_auth_username: jonathanjiang01@gmail.com
+
+  # 从容器内的文件读取 Gmail 应用专用密码，不要把密码直接写进本文件。
+  # 对应宿主机文件：monitoring/secrets/smtp-password。
+  smtp_auth_password_file: /etc/alertmanager/secrets/smtp-password
+
+  # Gmail SMTP 要求使用 TLS 加密连接。
+  smtp_require_tls: true
+
+# 全局路由：所有未单独匹配的告警都发送给 operations-email。
+route:
+  receiver: operations-email
+
+  # 相同环境、相同告警名称的告警合并到一封通知中。
+  group_by: [environment, alertname]
+
+  # 第一次发送前等待 30 秒，用来合并同时发生的告警。
+  group_wait: 30s
+
+  # 已发送的告警组发生变化后，至少等待 5 分钟再发送更新。
+  group_interval: 5m
+
+  # 告警持续未恢复时，每 4 小时重复提醒一次。
+  repeat_interval: 4h
+
+# 通知接收器定义。
+receivers:
+  - name: operations-email
+    email_configs:
+      # 收件人地址，需要替换为实际接收告警的邮箱。
+      - to: jiangmaokun16@gmail.com
+
+        # 告警恢复后也发送一封恢复通知。
+        send_resolved: true
